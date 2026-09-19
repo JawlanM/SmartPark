@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: smartpark-api
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: smartpark-api
+
+  template:
+    metadata:
+      labels:
+        app: smartpark-api
+
+    spec:
+
+      volumes:
+        - name: model-volume
+          emptyDir: {}
+
+      initContainers:
+        - name: download-model
+          image: google/cloud-sdk:slim
+
+          command:
+            - sh
+            - -c
+            - |
+              gsutil cp gs://YOUR_BUCKET_NAME/model.pt /models/model.pt
+
+          volumeMounts:
+            - name: model-volume
+              mountPath: /models
+
+      containers:
+        - name: smartpark-api
+
+          image: YOUR_IMAGE_HERE
+
+          ports:
+            - containerPort: 8000
+
+          env:
+            - name: YOLO_MODEL_PATH
+              value: "/models/model.pt"
+
+            - name: NUM_CARPARKS
+              value: "10"
+
+            - name: CACHE_TTL_SECS
+              value: "10"
+
+            - name: YOLO_CONFIG_DIR
+              value: "/tmp/Ultralytics"
+
+          volumeMounts:
+            - name: model-volume
+              mountPath: /models
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+
+            limits:
+              cpu: "2"
+              memory: "4Gi"
