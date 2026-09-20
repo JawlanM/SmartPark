@@ -4,7 +4,7 @@ import time
 import threading
 from yolo_service import find_parking
 
-imgs_folder = "./images"
+imgs_folder = os.getenv("IMAGES_FOLDER", "./images")
 
 YOLO_CONCURRENCY_LIMIT = 2
 yolo_semaphore = threading.Semaphore(YOLO_CONCURRENCY_LIMIT)
@@ -21,7 +21,7 @@ for i in range(1, NUM_carparks + 1):
     carparks.append({
         "carpark_id": f"CBD_{i:03}",
         "name": f"CBD Car Park {i}",
-        "image_path": f"./images/img{i:03}.jpg"
+        "image_path": os.path.join(imgs_folder, f"img{i:03}.jpg")
     })
 
 def take_photo():
