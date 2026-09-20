@@ -1,6 +1,5 @@
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
   name: smartpark-api
 
@@ -17,29 +16,55 @@ spec:
         app: smartpark-api
 
     spec:
+      serviceAccountName: smartpark-ksa
 
       volumes:
         - name: model-volume
           emptyDir: {}
 
+        - name: image-volume
+          emptyDir: {}
+
       initContainers:
-        - name: download-model
+        - name: download-assets
           image: google/cloud-sdk:slim
 
           command:
             - sh
             - -c
             - |
-              gsutil cp gs://YOUR_BUCKET_NAME/model.pt /models/model.pt
+              set -e
+
+              echo "Downloading YOLO model..."
+              gcloud storage cp \
+                gs://assignment1-smartpark-model-568039924052/model.pt \
+                /models/model.pt
+
+              echo "Downloading parking images..."
+              mkdir -p /data/images
+
+              gcloud storage cp --recursive \
+                gs://assignment1-smartpark-model-568039924052/images/* \
+                /data/images/
+
+              echo "Model:"
+              ls -lh /models/model.pt
+
+              echo "Image count:"
+              find /data/images -type f | wc -l
 
           volumeMounts:
             - name: model-volume
               mountPath: /models
 
+            - name: image-volume
+              mountPath: /data
+
       containers:
         - name: smartpark-api
+          image: australia-southeast1-docker.pkg.dev/assignment1-smartpark/smartpark-repo/smartpark-api:latest
 
-          image: YOUR_IMAGE_HERE
+          imagePullPolicy: Always
 
           ports:
             - containerPort: 8000
@@ -47,6 +72,9 @@ spec:
           env:
             - name: YOLO_MODEL_PATH
               value: "/models/model.pt"
+
+            - name: IMAGES_FOLDER
+              value: "/data/images"
 
             - name: NUM_CARPARKS
               value: "10"
@@ -60,6 +88,9 @@ spec:
           volumeMounts:
             - name: model-volume
               mountPath: /models
+
+            - name: image-volume
+              mountPath: /data
 
           resources:
             requests:
